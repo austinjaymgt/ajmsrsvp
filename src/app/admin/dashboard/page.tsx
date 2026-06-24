@@ -37,11 +37,9 @@ export default async function AdminDashboardPage() {
           <p style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: C.blue, marginBottom: "4px", fontWeight: 600 }}>Austin Jay Management — Admin</p>
           <h1 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0, color: C.bg, letterSpacing: "-0.01em" }}>Events</h1>
         </div>
-        <form action="/api/admin/auth" method="POST">
-          <Link href="/api/admin/logout" style={{ background: "none", border: `1px solid rgba(170,215,239,0.3)`, color: C.bg, padding: "8px 20px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, textDecoration: "none" }}>
-            Sign out
-          </Link>
-        </form>
+        <a href="/api/admin/logout" style={{ background: "none", border: `1px solid rgba(170,215,239,0.3)`, color: C.bg, padding: "8px 20px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, textDecoration: "none" }}>
+          Sign out
+        </a>
       </div>
 
       <div style={{ maxWidth: "900px", margin: "0 auto", padding: "40px 24px" }}>
