@@ -102,7 +102,7 @@ export default async function DetailsPage({ params }: { params: Promise<{ slug: 
                     <div style={{ width: "100px", flexShrink: 0, color: C.blue, fontSize: "12px", ...ss, paddingTop: "2px", fontWeight: 600, letterSpacing: "0.03em" }}>{item.time ?? ""}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, color: C.dark, marginBottom: "4px", ...ss, fontSize: "0.9375rem" }}>{item.title}</div>
-                      {item.description && <div style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss }}>{item.description}</div>}
+                      {item.description && <div style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss, whiteSpace: "pre-line" }}>{item.description}</div>}
                     </div>
                   </div>
                 ))}
@@ -122,7 +122,7 @@ export default async function DetailsPage({ params }: { params: Promise<{ slug: 
               <div key={block.id} style={{ background: C.blueLight, border: `1px solid ${C.border}`, padding: "28px", borderRadius: "2px" }}>
                 {block.icon && <div style={{ fontSize: "22px", marginBottom: "12px" }}>{block.icon}</div>}
                 <h4 style={{ fontWeight: 700, color: C.dark, marginBottom: "10px", fontSize: "0.9375rem", ...ss }}>{block.title}</h4>
-                <p style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss, margin: 0 }}>{block.body}</p>
+                <p style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss, margin: 0, whiteSpace: "pre-line" }}>{block.body}</p>
               </div>
             ))}
           </div>

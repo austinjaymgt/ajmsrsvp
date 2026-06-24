@@ -319,6 +319,7 @@ function QuestionEditor({ eventId, questions, onRefresh }: { eventId: number; qu
 
 function ItineraryEditor({ eventId, items, onRefresh }: { eventId: number; items: ItineraryItem[]; onRefresh: () => void }) {
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ day_label: "", time: "", title: "", description: "" });
 
   async function addItem() {
@@ -327,6 +328,20 @@ function ItineraryEditor({ eventId, items, onRefresh }: { eventId: number; items
       body: JSON.stringify({ ...form, eventId, order: items.length }),
     });
     setAdding(false); setForm({ day_label: "", time: "", title: "", description: "" }); onRefresh();
+  }
+
+  function startEdit(item: ItineraryItem) {
+    setEditingId(item.id);
+    setForm({ day_label: item.day_label, time: item.time ?? "", title: item.title, description: item.description ?? "" });
+    setAdding(false);
+  }
+
+  async function saveEdit() {
+    await fetch("/api/admin/itinerary", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingId, ...form }),
+    });
+    setEditingId(null); setForm({ day_label: "", time: "", title: "", description: "" }); onRefresh();
   }
 
   async function deleteItem(id: number) {
@@ -338,7 +353,7 @@ function ItineraryEditor({ eventId, items, onRefresh }: { eventId: number; items
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h2 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0 }}>Itinerary</h2>
-        <ActionBtn label="+ Add Item" onClick={() => setAdding(true)} />
+        <ActionBtn label="+ Add Item" onClick={() => { setAdding(true); setEditingId(null); setForm({ day_label: "", time: "", title: "", description: "" }); }} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {items.map((item) => (
@@ -346,23 +361,26 @@ function ItineraryEditor({ eventId, items, onRefresh }: { eventId: number; items
             <div>
               <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", color: C.blue, marginBottom: "4px", fontWeight: 700 }}>{item.day_label}{item.time && ` · ${item.time}`}</div>
               <div style={{ fontWeight: 600, color: C.dark }}>{item.title}</div>
-              {item.description && <div style={{ fontSize: "13px", color: C.textSecondary, marginTop: "2px" }}>{item.description}</div>}
+              {item.description && <div style={{ fontSize: "13px", color: C.textSecondary, marginTop: "2px", whiteSpace: "pre-line" }}>{item.description}</div>}
             </div>
-            <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Delete</button>
+            <div style={{ display: "flex", gap: "12px", flexShrink: 0, marginLeft: "16px" }}>
+              <button onClick={() => startEdit(item)} style={{ background: "none", border: "none", color: C.navy, cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Edit</button>
+              <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Delete</button>
+            </div>
           </div>
         ))}
         {items.length === 0 && <p style={{ color: C.textSecondary, fontSize: "14px" }}>No itinerary items yet.</p>}
       </div>
-      {adding && (
+      {(adding || editingId !== null) && (
         <div style={{ marginTop: "24px", background: C.blueLight, border: `1px solid ${C.border}`, padding: "24px" }}>
-          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>New Item</h3>
+          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>{editingId !== null ? "Edit Item" : "New Item"}</h3>
           <InputField label="Day (e.g. Friday, Oct 9)" value={form.day_label} onChange={(v) => setForm({ ...form, day_label: v })} />
           <InputField label="Time (optional)" value={form.time} onChange={(v) => setForm({ ...form, time: v })} />
           <InputField label="Title" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-          <InputField label="Description (optional)" value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
+          <InputField label="Description (optional)" value={form.description} onChange={(v) => setForm({ ...form, description: v })} type="textarea" />
           <div style={{ display: "flex", gap: "12px" }}>
-            <ActionBtn label="Save" onClick={addItem} disabled={!form.day_label || !form.title} />
-            <button onClick={() => setAdding(false)} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
+            <ActionBtn label="Save" onClick={editingId !== null ? saveEdit : addItem} disabled={!form.day_label || !form.title} />
+            <button onClick={() => { setAdding(false); setEditingId(null); setForm({ day_label: "", time: "", title: "", description: "" }); }} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
           </div>
         </div>
       )}
@@ -436,6 +454,7 @@ function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: 
 
 function InfoBlockEditor({ eventId, blocks, onRefresh }: { eventId: number; blocks: InfoBlock[]; onRefresh: () => void }) {
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ title: "", body: "", icon: "" });
 
   async function addBlock() {
@@ -444,6 +463,20 @@ function InfoBlockEditor({ eventId, blocks, onRefresh }: { eventId: number; bloc
       body: JSON.stringify({ ...form, eventId, order: blocks.length }),
     });
     setAdding(false); setForm({ title: "", body: "", icon: "" }); onRefresh();
+  }
+
+  function startEdit(b: InfoBlock) {
+    setEditingId(b.id);
+    setForm({ title: b.title, body: b.body, icon: b.icon ?? "" });
+    setAdding(false);
+  }
+
+  async function saveEdit() {
+    await fetch("/api/admin/info-blocks", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingId, ...form }),
+    });
+    setEditingId(null); setForm({ title: "", body: "", icon: "" }); onRefresh();
   }
 
   async function deleteBlock(id: number) {
@@ -455,28 +488,31 @@ function InfoBlockEditor({ eventId, blocks, onRefresh }: { eventId: number; bloc
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h2 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0 }}>Info Blocks</h2>
-        <ActionBtn label="+ Add Block" onClick={() => setAdding(true)} />
+        <ActionBtn label="+ Add Block" onClick={() => { setAdding(true); setEditingId(null); setForm({ title: "", body: "", icon: "" }); }} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "12px" }}>
         {blocks.map((b) => (
           <div key={b.id} style={{ background: C.bg, border: `1px solid ${C.border}`, padding: "20px" }}>
             {b.icon && <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>{b.icon}</div>}
             <div style={{ fontWeight: 700, marginBottom: "6px", color: C.dark, ...ss }}>{b.title}</div>
-            <div style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.6, ...ss }}>{b.body}</div>
-            <button onClick={() => deleteBlock(b.id)} style={{ marginTop: "12px", background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Delete</button>
+            <div style={{ fontSize: "13px", color: C.textSecondary, lineHeight: 1.6, ...ss, whiteSpace: "pre-line" }}>{b.body}</div>
+            <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+              <button onClick={() => startEdit(b)} style={{ background: "none", border: "none", color: C.navy, cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Edit</button>
+              <button onClick={() => deleteBlock(b.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Delete</button>
+            </div>
           </div>
         ))}
         {blocks.length === 0 && <p style={{ color: C.textSecondary, fontSize: "14px" }}>No info blocks yet.</p>}
       </div>
-      {adding && (
+      {(adding || editingId !== null) && (
         <div style={{ marginTop: "24px", background: C.blueLight, border: `1px solid ${C.border}`, padding: "24px" }}>
-          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>New Info Block</h3>
+          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>{editingId !== null ? "Edit Info Block" : "New Info Block"}</h3>
           <InputField label="Icon (emoji, optional)" value={form.icon} onChange={(v) => setForm({ ...form, icon: v })} />
           <InputField label="Title" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
           <InputField label="Body text" value={form.body} onChange={(v) => setForm({ ...form, body: v })} type="textarea" />
           <div style={{ display: "flex", gap: "12px" }}>
-            <ActionBtn label="Save" onClick={addBlock} disabled={!form.title || !form.body} />
-            <button onClick={() => setAdding(false)} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
+            <ActionBtn label="Save" onClick={editingId !== null ? saveEdit : addBlock} disabled={!form.title || !form.body} />
+            <button onClick={() => { setAdding(false); setEditingId(null); setForm({ title: "", body: "", icon: "" }); }} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
           </div>
         </div>
       )}

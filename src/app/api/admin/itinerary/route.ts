@@ -11,6 +11,13 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
+export async function PUT(req: NextRequest) {
+  if (!(await isAuthenticated())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id, day_label, time, title, description } = await req.json();
+  await supabase.from("itinerary_items").update({ day_label, time: time || null, title, description: description || null }).eq("id", id);
+  return NextResponse.json({ success: true });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id");

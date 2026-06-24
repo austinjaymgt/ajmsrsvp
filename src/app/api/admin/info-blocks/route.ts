@@ -11,6 +11,13 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
+export async function PUT(req: NextRequest) {
+  if (!(await isAuthenticated())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id, title, body, icon } = await req.json();
+  await supabase.from("info_blocks").update({ title, body, icon: icon || null }).eq("id", id);
+  return NextResponse.json({ success: true });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id");
