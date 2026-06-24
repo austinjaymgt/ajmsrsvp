@@ -7,10 +7,13 @@ const C = { dark: "#233036", navy: "#244357", blue: "#AAD7EF", blueLight: "#daee
 const sf = { fontFamily: "var(--font-playfair), Georgia, serif" };
 const ss = { fontFamily: "var(--font-inter), system-ui, sans-serif" };
 
-type Question = { id: number; type: "text" | "select" | "multiselect"; label: string; options: string[] | null; required: boolean };
+type Question = { id: number; type: "text" | "textarea" | "select" | "multiselect"; label: string; options: string[] | null; required: boolean };
+type CostItem = { label: string; amount: string };
+type EventData = { cost_items: CostItem[] | null; cost_note: string | null };
 type FlowStep =
   | { kind: "intro" }
   | { kind: "name" }
+  | { kind: "email" }
   | { kind: "attending" }
   | { kind: "question"; question: Question; index: number; total: number }
   | { kind: "cost" }
@@ -31,26 +34,35 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [attending, setAttending] = useState<"confirmed" | "maybe" | "declined" | null>(null);
   const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
   const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   if (questions === null) {
     fetch(`/api/rsvp/questions?slug=${slug}`)
       .then((r) => r.json())
-      .then((data) => setQuestions(data.questions ?? []));
+      .then((data) => {
+        setQuestions(data.questions ?? []);
+        if (data.event) setEventData(data.event);
+      });
     setQuestions([]);
   }
 
   const activeQuestions = attending === "declined" ? [] : (questions ?? []);
+  const costItems: CostItem[] = eventData?.cost_items ?? [];
+  const showCost = attending !== "declined" && costItems.length > 0;
+
   const steps: FlowStep[] = [
     { kind: "intro" },
     { kind: "name" },
+    { kind: "email" },
     { kind: "attending" },
     ...activeQuestions.map((q, i) => ({ kind: "question" as const, question: q, index: i, total: activeQuestions.length })),
-    { kind: "cost" },
+    ...(showCost ? [{ kind: "cost" as const }] : []),
     { kind: "done" },
   ];
   const step = steps[stepIndex];
@@ -64,7 +76,7 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
       const res = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, name, status: attending, answers }),
+        body: JSON.stringify({ slug, name, email, status: attending, answers }),
       });
       if (res.ok) {
         setSubmitted(true);
@@ -93,6 +105,12 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
     </button>
   );
 
+  const underlineInput = (value: string, onChange: (v: string) => void, placeholder: string, onEnter?: () => void, type = "text") => (
+    <input autoFocus type={type} value={value} onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && onEnter && onEnter()} placeholder={placeholder}
+      style={{ width: "100%", border: "none", borderBottom: `2px solid ${C.dark}`, padding: "12px 0", fontSize: "1.25rem", background: "transparent", color: C.dark, outline: "none", ...sf }} />
+  );
+
   if (step.kind === "intro") return card(
     <div style={{ textAlign: "center", paddingTop: "20px" }}>
       <p style={{ fontSize: "10px", letterSpacing: "0.3em", textTransform: "uppercase", color: C.blue, ...ss, marginBottom: "24px", fontWeight: 600 }}>Austin Jay Management presents</p>
@@ -105,9 +123,17 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
   if (step.kind === "name") return card(
     <div style={{ paddingTop: "20px" }}>
       <label style={{ display: "block", fontSize: "1.625rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "32px", lineHeight: 1.3 }}>First, what&apos;s your name?</label>
-      <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && name.trim() && next()} placeholder="Your name"
-        style={{ width: "100%", border: "none", borderBottom: `2px solid ${C.dark}`, padding: "12px 0", fontSize: "1.25rem", background: "transparent", color: C.dark, outline: "none", ...sf }} />
+      {underlineInput(name, setName, "Your name", () => name.trim() && next())}
       <div style={{ marginTop: "32px" }}>{primaryBtn("Continue", next, !name.trim())}</div>
+    </div>, true
+  );
+
+  if (step.kind === "email") return card(
+    <div style={{ paddingTop: "20px" }}>
+      <label style={{ display: "block", fontSize: "1.625rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "8px", lineHeight: 1.3 }}>And your email?</label>
+      <p style={{ color: C.textSecondary, marginBottom: "32px", ...ss, fontSize: "0.9375rem" }}>So we can send you updates and details.</p>
+      {underlineInput(email, setEmail, "your@email.com", () => email.trim() && next(), "email")}
+      <div style={{ marginTop: "32px" }}>{primaryBtn("Continue", next, !email.trim())}</div>
     </div>, true
   );
 
@@ -145,13 +171,18 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
         <p style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: C.blue, ...ss, marginBottom: "20px", fontWeight: 600 }}>Question {step.index + 1} of {step.total}</p>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "32px", lineHeight: 1.35 }}>{q.label}</h2>
 
-        {q.type === "text" && <>
+        {(q.type === "text") && <>
+          {underlineInput((currentAnswer as string) ?? "", setAnswer, "Your answer...", () => canContinue && next())}
+          <div style={{ marginTop: "32px" }}>{primaryBtn("Continue", next, !canContinue)}</div>
+        </>}
+
+        {q.type === "textarea" && <>
           <textarea autoFocus value={(currentAnswer as string) ?? ""} onChange={(e) => setAnswer(e.target.value)} placeholder="Your answer..." rows={3}
             style={{ width: "100%", border: `1px solid ${C.border}`, padding: "12px 14px", fontSize: "0.9375rem", background: C.blueLight, color: C.dark, outline: "none", resize: "vertical", ...ss }} />
           <div style={{ marginTop: "20px" }}>{primaryBtn("Continue", next, !canContinue)}</div>
         </>}
 
-        {q.type === "select" && q.options && (
+        {q.type === "select" && q.options && q.options.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {q.options.map((opt) => (
               <button key={opt} onClick={() => { setAnswer(opt); setTimeout(next, 250); }}
@@ -162,7 +193,7 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
           </div>
         )}
 
-        {q.type === "multiselect" && q.options && <>
+        {q.type === "multiselect" && q.options && q.options.length > 0 && <>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
             {q.options.map((opt) => {
               const selected = Array.isArray(currentAnswer) && currentAnswer.includes(opt);
@@ -180,26 +211,34 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
     );
   }
 
-  if (step.kind === "cost") return card(
-    <div style={{ paddingTop: "20px" }}>
-      <h2 style={{ fontSize: "1.625rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "8px" }}>What to expect cost-wise</h2>
-      <p style={{ color: C.textSecondary, marginBottom: "32px", ...ss, fontSize: "0.875rem" }}>Here&apos;s a rough breakdown. We&apos;ll collect after the trip.</p>
-      <div style={{ borderTop: `1px solid ${C.border}` }}>
-        {[["Airbnb (your share)", "~$200"], ["Group dinners", "~$100"], ["Group activities", "~$50"]].map(([label, value]) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "14px 0", borderBottom: `1px solid ${C.border}`, ...ss, fontSize: "0.9375rem" }}>
-            <span style={{ color: C.dark }}>{label}</span>
-            <span style={{ color: C.textSecondary }}>{value}</span>
-          </div>
-        ))}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", ...ss, fontWeight: 700 }}>
-          <span style={{ color: C.dark }}>Estimated total</span>
-          <span style={{ color: C.dark }}>~$350</span>
+  if (step.kind === "cost") {
+    const total = costItems.reduce((sum, item) => {
+      const num = parseFloat(item.amount.replace(/[^0-9.]/g, ""));
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+    return card(
+      <div style={{ paddingTop: "20px" }}>
+        <h2 style={{ fontSize: "1.625rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "8px" }}>What to expect cost-wise</h2>
+        <p style={{ color: C.textSecondary, marginBottom: "32px", ...ss, fontSize: "0.875rem" }}>Here&apos;s a rough breakdown. We&apos;ll collect after the trip.</p>
+        <div style={{ borderTop: `1px solid ${C.border}` }}>
+          {costItems.map((item) => (
+            <div key={item.label} style={{ display: "flex", justifyContent: "space-between", padding: "14px 0", borderBottom: `1px solid ${C.border}`, ...ss, fontSize: "0.9375rem" }}>
+              <span style={{ color: C.dark }}>{item.label}</span>
+              <span style={{ color: C.textSecondary }}>{item.amount}</span>
+            </div>
+          ))}
+          {total > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", ...ss, fontWeight: 700 }}>
+              <span style={{ color: C.dark }}>Estimated total</span>
+              <span style={{ color: C.dark }}>~${total}</span>
+            </div>
+          )}
         </div>
-      </div>
-      <p style={{ color: C.textSecondary, fontSize: "0.8125rem", marginTop: "8px", ...ss, lineHeight: 1.6 }}>Payment collection coming soon. Details before the trip.</p>
-      <div style={{ marginTop: "32px" }}>{primaryBtn("Looks good — submit", next, false, true)}</div>
-    </div>, true
-  );
+        {eventData?.cost_note && <p style={{ color: C.textSecondary, fontSize: "0.8125rem", marginTop: "8px", ...ss, lineHeight: 1.6 }}>{eventData.cost_note}</p>}
+        <div style={{ marginTop: "32px" }}>{primaryBtn("Looks good — submit", next, false, true)}</div>
+      </div>, true
+    );
+  }
 
   if (step.kind === "done") return card(
     <div style={{ textAlign: "center", paddingTop: "20px" }}>

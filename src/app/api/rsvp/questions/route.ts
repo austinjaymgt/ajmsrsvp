@@ -7,10 +7,10 @@ export async function GET(req: NextRequest) {
   const slug = new URL(req.url).searchParams.get("slug");
 
   const { data: event } = slug
-    ? await supabase.from("events").select("id").eq("slug", slug).single()
-    : await supabase.from("events").select("id").eq("status", "active").limit(1).single();
+    ? await supabase.from("events").select("id, cost_items, cost_note").eq("slug", slug).single()
+    : await supabase.from("events").select("id, cost_items, cost_note").eq("status", "active").limit(1).single();
 
-  if (!event) return NextResponse.json({ questions: [] });
+  if (!event) return NextResponse.json({ questions: [], event: null });
 
   const { data: rows } = await supabase
     .from("questions")
@@ -24,5 +24,10 @@ export async function GET(req: NextRequest) {
     required: !!q.required,
   }));
 
-  return NextResponse.json({ questions });
+  const eventData = {
+    cost_items: event.cost_items ? JSON.parse(event.cost_items) : null,
+    cost_note: event.cost_note ?? null,
+  };
+
+  return NextResponse.json({ questions, event: eventData });
 }

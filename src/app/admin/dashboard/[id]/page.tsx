@@ -5,7 +5,8 @@ import AdminDashboardClient from "../AdminDashboardClient";
 
 export const dynamic = "force-dynamic";
 
-type Event = { id: number; name: string; slug: string; start_date: string; end_date: string; location: string; hero_image_url: string | null; description: string };
+type CostItem = { label: string; amount: string };
+type Event = { id: number; name: string; slug: string; start_date: string; end_date: string; location: string; hero_image_url: string | null; description: string; cost_items: CostItem[] | null; cost_note: string | null };
 type Guest = { id: number; name: string; email: string | null; status: string; responded_at: string };
 type Question = { id: number; type: string; label: string; options: string | null; order: number; required: number };
 type ItineraryItem = { id: number; day_label: string; time: string | null; title: string; description: string | null; order: number };
@@ -43,7 +44,7 @@ export default async function AdminEventPage({ params }: { params: Promise<{ id:
 
   return (
     <AdminDashboardClient
-      event={event}
+      event={{ ...event, cost_items: event.cost_items ? JSON.parse(event.cost_items as unknown as string) : null }}
       guests={guests}
       questions={questions.map((q) => ({ ...q, options: q.options ? JSON.parse(q.options) : null, required: !!q.required }))}
       itinerary={itinerary}

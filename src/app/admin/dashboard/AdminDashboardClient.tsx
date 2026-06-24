@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Event = { id: number; name: string; slug: string; start_date: string; end_date: string; location: string; hero_image_url: string | null; description: string };
+type CostItem = { label: string; amount: string };
+type Event = { id: number; name: string; slug: string; start_date: string; end_date: string; location: string; hero_image_url: string | null; description: string; cost_items: CostItem[] | null; cost_note: string | null };
 type Guest = { id: number; name: string; email: string | null; status: string; responded_at: string };
 type Question = { id: number; type: string; label: string; options: string[] | null; order: number; required: boolean };
 type ItineraryItem = { id: number; day_label: string; time: string | null; title: string; description: string | null; order: number };
@@ -15,7 +16,7 @@ const C = { dark: "#233036", navy: "#244357", blue: "#AAD7EF", blueLight: "#daee
 const ss = { fontFamily: "var(--font-inter), system-ui, sans-serif" };
 const sf = { fontFamily: "var(--font-playfair), Georgia, serif" };
 
-const navItems = ["Guests", "Questions", "Itinerary", "Photos", "Info Blocks", "Event Settings"];
+const navItems = ["Guests", "Questions", "Itinerary", "Photos", "Info Blocks", "Cost", "Event Settings"];
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; color: string }> = {
@@ -143,18 +144,23 @@ export default function AdminDashboardClient({ event, guests, questions, itinera
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.blueLight }}>
-                    {["Name", "Status", "Responded", ...questions.map((q) => q.label.length > 28 ? q.label.slice(0, 28) + "…" : q.label)].map((h) => (
+                    {["Name", "Email", "Status", "Responded", ...questions.map((q) => q.label.length > 28 ? q.label.slice(0, 28) + "…" : q.label)].map((h) => (
                       <th key={h} style={{ textAlign: "left", padding: "12px 16px", color: C.textSecondary, fontWeight: 700, textTransform: "uppercase", fontSize: "10px", letterSpacing: "0.12em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {guests.length === 0 && (
-                    <tr><td colSpan={3 + questions.length} style={{ padding: "40px 16px", textAlign: "center", color: C.textSecondary }}>No guests yet.</td></tr>
+                    <tr><td colSpan={4 + questions.length} style={{ padding: "40px 16px", textAlign: "center", color: C.textSecondary }}>No guests yet.</td></tr>
                   )}
                   {guests.map((g) => (
                     <tr key={g.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: "14px 16px", color: C.dark, fontWeight: 600 }}>{g.name}</td>
+                      <td style={{ padding: "14px 16px" }}>
+                        {g.email
+                          ? <span onClick={() => navigator.clipboard.writeText(g.email!)} title="Click to copy" style={{ color: C.navy, cursor: "pointer", fontFamily: "monospace", fontSize: "12px", textDecoration: "underline dotted" }}>{g.email}</span>
+                          : <span style={{ color: C.border }}>—</span>}
+                      </td>
                       <td style={{ padding: "14px 16px" }}><StatusBadge status={g.status} /></td>
                       <td style={{ padding: "14px 16px", color: C.textSecondary }}>{g.responded_at ? new Date(g.responded_at).toLocaleDateString() : "—"}</td>
                       {questions.map((q) => (
@@ -172,6 +178,7 @@ export default function AdminDashboardClient({ event, guests, questions, itinera
         {tab === "Itinerary" && <ItineraryEditor eventId={event.id} items={itinerary} onRefresh={() => router.refresh()} />}
         {tab === "Photos" && <PhotoEditor eventId={event.id} photos={photos} onRefresh={() => router.refresh()} />}
         {tab === "Info Blocks" && <InfoBlockEditor eventId={event.id} blocks={infoBlocks} onRefresh={() => router.refresh()} />}
+        {tab === "Cost" && <CostEditor event={event} onRefresh={() => router.refresh()} />}
         {tab === "Event Settings" && <EventSettingsEditor event={event} onRefresh={() => router.refresh()} />}
       </div>
     </div>
@@ -180,18 +187,80 @@ export default function AdminDashboardClient({ event, guests, questions, itinera
 
 // ── Question Editor ──────────────────────────────────────────────
 
+function QuestionForm({ initial, onSave, onCancel, title }: {
+  initial: { type: string; label: string; options: string; required: boolean };
+  onSave: (f: { type: string; label: string; options: string; required: boolean }) => Promise<void>;
+  onCancel: () => void;
+  title: string;
+}) {
+  const [form, setForm] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handle() {
+    setSaving(true); setError("");
+    try { await onSave(form); } catch (e) { setError(String(e)); } finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ marginTop: "24px", background: C.blueLight, border: `1px solid ${C.border}`, padding: "24px" }}>
+      <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>{title}</h3>
+      <label style={{ display: "block", marginBottom: "14px" }}>
+        <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", color: C.textSecondary, display: "block", marginBottom: "6px", fontWeight: 600, ...ss }}>Type</span>
+        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, background: C.bg, ...ss }}>
+          <option value="single_line">Single line text</option>
+          <option value="text">Long text</option>
+          <option value="select">Single select</option>
+          <option value="multiselect">Multi-select</option>
+        </select>
+      </label>
+      <InputField label="Question label" value={form.label} onChange={(v) => setForm({ ...form, label: v })} />
+      {(form.type === "select" || form.type === "multiselect") && (
+        <InputField label="Options (one per line)" value={form.options} onChange={(v) => setForm({ ...form, options: v })} type="textarea" />
+      )}
+      <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", cursor: "pointer" }}>
+        <input type="checkbox" checked={form.required} onChange={(e) => setForm({ ...form, required: e.target.checked })} />
+        <span style={{ fontSize: "14px", color: C.dark, ...ss }}>Required</span>
+      </label>
+      {error && <p style={{ color: "#b91c1c", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
+      <div style={{ display: "flex", gap: "12px" }}>
+        <ActionBtn label={saving ? "Saving…" : "Save"} onClick={handle} disabled={!form.label || saving} />
+        <button onClick={onCancel} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function QuestionEditor({ eventId, questions, onRefresh }: { eventId: number; questions: Question[]; onRefresh: () => void }) {
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ type: "select", label: "", options: "", required: true });
+  const [editingId, setEditingId] = useState<number | null>(null);
 
-  async function addQuestion() {
-    const options = form.type === "text" ? null : form.options.split("\n").map((s) => s.trim()).filter(Boolean);
-    await fetch("/api/admin/questions", {
+  function toDbType(type: string) {
+    if (type === "single_line") return "text";
+    return type;
+  }
+
+  async function addQuestion(form: { type: string; label: string; options: string; required: boolean }) {
+    const hasOptions = form.type === "select" || form.type === "multiselect";
+    const options = hasOptions ? form.options.split("\n").map((s) => s.trim()).filter(Boolean) : null;
+    const res = await fetch("/api/admin/questions", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId, type: form.type, label: form.label, options, required: form.required, order: questions.length }),
+      body: JSON.stringify({ eventId, type: toDbType(form.type), label: form.label, options, required: form.required, order: questions.length }),
     });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Failed to save"); }
     setAdding(false);
-    setForm({ type: "select", label: "", options: "", required: true });
+    onRefresh();
+  }
+
+  async function updateQuestion(id: number, form: { type: string; label: string; options: string; required: boolean }) {
+    const hasOptions = form.type === "select" || form.type === "multiselect";
+    const options = hasOptions ? form.options.split("\n").map((s) => s.trim()).filter(Boolean) : null;
+    const res = await fetch("/api/admin/questions", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, type: toDbType(form.type), label: form.label, options, required: form.required }),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Failed to save"); }
+    setEditingId(null);
     onRefresh();
   }
 
@@ -205,46 +274,42 @@ function QuestionEditor({ eventId, questions, onRefresh }: { eventId: number; qu
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h2 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0 }}>RSVP Questions</h2>
-        <ActionBtn label="+ Add Question" onClick={() => setAdding(true)} />
+        <ActionBtn label="+ Add Question" onClick={() => { setAdding(true); setEditingId(null); }} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {questions.map((q) => (
-          <div key={q.id} style={{ background: C.bg, border: `1px solid ${C.border}`, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontWeight: 600, color: C.dark, marginBottom: "4px" }}>{q.label}</div>
-              <div style={{ fontSize: "12px", color: C.textSecondary }}>
-                {q.type} · {q.required ? "required" : "optional"}{q.options && ` · ${q.options.join(", ")}`}
+          <div key={q.id}>
+            <div style={{ background: C.bg, border: `1px solid ${C.border}`, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontWeight: 600, color: C.dark, marginBottom: "4px" }}>{q.label}</div>
+                <div style={{ fontSize: "12px", color: C.textSecondary }}>
+                  {q.type} · {q.required ? "required" : "optional"}{q.options && ` · ${q.options.join(", ")}`}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button onClick={() => setEditingId(editingId === q.id ? null : q.id)} style={{ background: "none", border: "none", color: C.navy, cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Edit</button>
+                <button onClick={() => deleteQuestion(q.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Delete</button>
               </div>
             </div>
-            <button onClick={() => deleteQuestion(q.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Delete</button>
+            {editingId === q.id && (
+              <QuestionForm
+                title="Edit Question"
+                initial={{ type: q.type, label: q.label, options: q.options ? q.options.join("\n") : "", required: q.required }}
+                onSave={(f) => updateQuestion(q.id, f)}
+                onCancel={() => setEditingId(null)}
+              />
+            )}
           </div>
         ))}
         {questions.length === 0 && <p style={{ color: C.textSecondary, fontSize: "14px" }}>No questions yet.</p>}
       </div>
       {adding && (
-        <div style={{ marginTop: "24px", background: C.blueLight, border: `1px solid ${C.border}`, padding: "24px" }}>
-          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>New Question</h3>
-          <label style={{ display: "block", marginBottom: "14px" }}>
-            <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", color: C.textSecondary, display: "block", marginBottom: "6px", fontWeight: 600, ...ss }}>Type</span>
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, background: C.bg, ...ss }}>
-              <option value="text">Text</option>
-              <option value="select">Single select</option>
-              <option value="multiselect">Multi-select</option>
-            </select>
-          </label>
-          <InputField label="Question label" value={form.label} onChange={(v) => setForm({ ...form, label: v })} />
-          {form.type !== "text" && (
-            <InputField label="Options (one per line)" value={form.options} onChange={(v) => setForm({ ...form, options: v })} type="textarea" />
-          )}
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", cursor: "pointer" }}>
-            <input type="checkbox" checked={form.required} onChange={(e) => setForm({ ...form, required: e.target.checked })} />
-            <span style={{ fontSize: "14px", color: C.dark, ...ss }}>Required</span>
-          </label>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <ActionBtn label="Save" onClick={addQuestion} disabled={!form.label} />
-            <button onClick={() => setAdding(false)} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
-          </div>
-        </div>
+        <QuestionForm
+          title="New Question"
+          initial={{ type: "single_line", label: "", options: "", required: true }}
+          onSave={addQuestion}
+          onCancel={() => setAdding(false)}
+        />
       )}
     </div>
   );
@@ -419,6 +484,52 @@ function InfoBlockEditor({ eventId, blocks, onRefresh }: { eventId: number; bloc
   );
 }
 
+// ── Cost Editor ───────────────────────────────────────────────────
+
+function CostEditor({ event, onRefresh }: { event: Event; onRefresh: () => void }) {
+  const [costItems, setCostItems] = useState<CostItem[]>(event.cost_items ?? []);
+  const [note, setNote] = useState(event.cost_note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    await fetch("/api/admin/event", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: event.id, name: event.name, start_date: event.start_date, end_date: event.end_date, location: event.location, hero_image_url: event.hero_image_url, description: event.description, cost_items: costItems.length > 0 ? costItems : null, cost_note: note }) });
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); onRefresh();
+  }
+
+  function addItem() { setCostItems((prev) => [...prev, { label: "", amount: "" }]); }
+  function updateItem(i: number, field: "label" | "amount", val: string) {
+    setCostItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
+  }
+  function removeItem(i: number) { setCostItems((prev) => prev.filter((_, idx) => idx !== i)); }
+
+  const inputStyle: React.CSSProperties = { padding: "8px 10px", border: `1px solid ${C.border}`, background: C.blueLight, fontSize: "13px", color: C.dark, outline: "none", ...ss };
+
+  return (
+    <div style={{ maxWidth: "560px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <h2 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0 }}>Cost Breakdown</h2>
+        <ActionBtn label="+ Add Line" onClick={addItem} />
+      </div>
+      {costItems.length === 0 && <p style={{ color: C.textSecondary, fontSize: "14px", marginBottom: "24px" }}>No cost items — the cost step will be hidden from guests.</p>}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
+        {costItems.map((item, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 120px auto", gap: "8px", alignItems: "center" }}>
+            <input value={item.label} onChange={(e) => updateItem(i, "label", e.target.value)} placeholder="Label (e.g. Airbnb share)" style={{ ...inputStyle, width: "100%" }} />
+            <input value={item.amount} onChange={(e) => updateItem(i, "amount", e.target.value)} placeholder="~$200" style={{ ...inputStyle, width: "100%" }} />
+            <button onClick={() => removeItem(i)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}>×</button>
+          </div>
+        ))}
+      </div>
+      <InputField label="Note (shown below breakdown)" value={note} onChange={setNote} />
+      <button onClick={save} disabled={saving} style={{ background: saving ? C.border : C.dark, color: saving ? C.textSecondary : C.bg, border: "none", padding: "12px 32px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700, ...ss }}>
+        {saving ? "Saving…" : saved ? "Saved ✓" : "Save Changes"}
+      </button>
+    </div>
+  );
+}
+
 // ── Event Settings Editor ─────────────────────────────────────────
 
 function EventSettingsEditor({ event, onRefresh }: { event: Event; onRefresh: () => void }) {
@@ -428,7 +539,7 @@ function EventSettingsEditor({ event, onRefresh }: { event: Event; onRefresh: ()
 
   async function save() {
     setSaving(true);
-    await fetch("/api/admin/event", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: event.id, ...form }) });
+    await fetch("/api/admin/event", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: event.id, ...form, cost_items: event.cost_items, cost_note: event.cost_note }) });
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000); onRefresh();
   }
 

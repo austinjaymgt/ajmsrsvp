@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
-  const { slug, name, status, answers } = await req.json();
+  const { slug, name, email, status, answers } = await req.json();
   if (!name || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
   const { data: event } = slug
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const { data: guest } = await supabase
     .from("guests")
-    .insert({ event_id: event.id, name, status })
+    .insert({ event_id: event.id, name, email: email ?? null, status })
     .select("id")
     .single();
 
