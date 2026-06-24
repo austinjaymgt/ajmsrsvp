@@ -77,7 +77,7 @@ export default async function DetailsPage({ params }: { params: Promise<{ slug: 
 
       {event.description && (
         <section style={{ maxWidth: "620px", margin: "0 auto", padding: "72px 24px 0" }}>
-          <p style={{ fontSize: "1.2rem", lineHeight: 1.8, color: C.dark, textAlign: "center", ...sf }}>{event.description}</p>
+          <p style={{ fontSize: "1.2rem", lineHeight: 1.8, color: C.dark, textAlign: "center", whiteSpace: "pre-line", ...sf }}>{event.description}</p>
         </section>
       )}
 
