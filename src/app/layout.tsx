@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-playfair" });
 
 export const metadata: Metadata = {
-  title: "AJM Events — Homecoming 2026",
-  description: "You're invited. RSVP for Homecoming 2026.",
+  title: "Noted by AJM",
+  description: "Event RSVPs, powered by AJM Events",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,8 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
         {children}
         <footer style={{ textAlign: "center", padding: "1.5rem 0 2rem", opacity: 0.35, fontSize: "0.7rem", letterSpacing: "0.08em", userSelect: "none" }}>
+          Noted by AJM · RSVP management by{" "}
           <a href="https://ajmevents.co" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-            powered by AJM Events
+            AJM Events ↗
           </a>
         </footer>
       </body>

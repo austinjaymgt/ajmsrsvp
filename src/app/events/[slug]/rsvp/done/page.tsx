@@ -12,7 +12,7 @@ export default async function RSVPDonePage({ params, searchParams }: { params: P
       <div style={{ maxWidth: "480px" }}>
         <div style={{ fontSize: "2.5rem", marginBottom: "24px" }}>🎉</div>
         <h1 style={{ fontSize: "2.5rem", fontWeight: 700, color: C.dark, fontFamily: "var(--font-playfair), Georgia, serif", marginBottom: "16px", letterSpacing: "-0.01em" }}>
-          You&apos;re confirmed, {first}!
+          You&apos;re noted, {first}!
         </h1>
         <p style={{ color: C.textSecondary, lineHeight: 1.7, fontFamily: "var(--font-inter), system-ui, sans-serif", fontSize: "0.9375rem", marginBottom: "48px" }}>
           Your RSVP is locked in. We&apos;ll be in touch closer to the date with all the details.

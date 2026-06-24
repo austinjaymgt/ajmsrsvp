@@ -34,7 +34,7 @@ export default async function AdminDashboardPage() {
       {/* Header */}
       <div style={{ background: C.dark, padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <p style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: C.blue, marginBottom: "4px", fontWeight: 600 }}>Austin Jay Management — Admin</p>
+          <p style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: C.blue, marginBottom: "4px", fontWeight: 600 }}>Noted by AJM — Admin</p>
           <h1 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0, color: C.bg, letterSpacing: "-0.01em" }}>Events</h1>
         </div>
         <a href="/api/admin/logout" style={{ background: "none", border: `1px solid rgba(170,215,239,0.3)`, color: C.bg, padding: "8px 20px", cursor: "pointer", fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, textDecoration: "none" }}>

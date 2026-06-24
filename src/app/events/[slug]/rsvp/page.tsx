@@ -243,9 +243,9 @@ export default function RSVPPage({ params }: { params: Promise<{ slug: string }>
   if (step.kind === "done") return card(
     <div style={{ textAlign: "center", paddingTop: "20px" }}>
       <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🎉</div>
-      <h2 style={{ fontSize: "1.875rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "12px" }}>You&apos;re in, {name.split(" ")[0]}!</h2>
+      <h2 style={{ fontSize: "1.875rem", fontWeight: 700, color: C.dark, ...sf, marginBottom: "12px" }}>You&apos;re noted, {name.split(" ")[0]}!</h2>
       <p style={{ color: C.textSecondary, marginBottom: "32px", ...ss, lineHeight: 1.65, fontSize: "0.9375rem" }}>
-        {attending === "confirmed" ? "We're so excited to see you. Details and updates are coming — check your inbox."
+        {attending === "confirmed" ? "We'll see you there. Details and updates are coming — check your inbox."
           : attending === "maybe" ? "Totally get it. We'll check back in closer to the date."
           : "Sorry you can't make it. We'll miss you!"}
       </p>

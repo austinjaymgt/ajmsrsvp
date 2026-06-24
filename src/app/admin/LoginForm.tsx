@@ -35,7 +35,7 @@ export default function AdminLoginForm() {
       <div style={{ width: "100%", maxWidth: "380px" }}>
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <p style={{ fontSize: "10px", letterSpacing: "0.3em", textTransform: "uppercase", color: C.blue, ...ss, marginBottom: "10px", fontWeight: 600 }}>
-            Austin Jay Management
+            Noted by AJM
           </p>
           <h1 style={{ fontSize: "2rem", fontWeight: 700, color: C.dark, ...sf, margin: 0, letterSpacing: "-0.01em" }}>Admin</h1>
         </div>
