@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getDb } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,9 @@ function formatDateRange(start: string, end: string) {
   return `${mo(s)} ${da(s)} – ${mo(e)} ${da(e)}, ${yr(s)}`;
 }
 
-export default function HomePage() {
-  const db = getDb();
-  const events = db.prepare("SELECT * FROM events WHERE status = 'active' ORDER BY start_date ASC").all() as Event[];
+export default async function HomePage() {
+  const { data } = await supabase.from("events").select("*").eq("status", "active").order("start_date", { ascending: true });
+  const events = (data ?? []) as Event[];
 
   // Single event — hero landing
   if (events.length === 1) {

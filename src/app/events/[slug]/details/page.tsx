@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +20,19 @@ function formatDate(d: string) {
 
 export default async function DetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const db = getDb();
-  const event = db.prepare("SELECT * FROM events WHERE slug = ?").get(slug) as Event | undefined;
+  const { data: event } = await supabase.from("events").select("*").eq("slug", slug).single();
   if (!event) notFound();
 
-  const itinerary = db.prepare(`SELECT * FROM itinerary_items WHERE event_id = ? ORDER BY "order"`).all(event.id) as ItineraryItem[];
-  const photos = db.prepare(`SELECT * FROM photos WHERE event_id = ? ORDER BY "order"`).all(event.id) as Photo[];
-  const infoBlocks = db.prepare(`SELECT * FROM info_blocks WHERE event_id = ? ORDER BY "order"`).all(event.id) as InfoBlock[];
-  const guests = db.prepare("SELECT status FROM guests WHERE event_id = ?").all(event.id) as Guest[];
+  const [{ data: itineraryData }, { data: photosData }, { data: infoBlocksData }, { data: guestsData }] = await Promise.all([
+    supabase.from("itinerary_items").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("photos").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("info_blocks").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("guests").select("status").eq("event_id", event.id),
+  ]);
+  const itinerary = (itineraryData ?? []) as ItineraryItem[];
+  const photos = (photosData ?? []) as Photo[];
+  const infoBlocks = (infoBlocksData ?? []) as InfoBlock[];
+  const guests = (guestsData ?? []) as Guest[];
 
   const totalInvited = 8;
   const confirmed = guests.filter((g) => g.status === "confirmed").length;

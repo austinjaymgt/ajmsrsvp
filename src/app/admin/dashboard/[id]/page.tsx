@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { supabase } from "@/lib/db";
 import AdminDashboardClient from "../AdminDashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -18,16 +18,28 @@ export default async function AdminEventPage({ params }: { params: Promise<{ id:
   if (!authed) redirect("/admin");
 
   const { id } = await params;
-  const db = getDb();
-  const event = db.prepare("SELECT * FROM events WHERE id = ?").get(parseInt(id)) as Event | undefined;
+  const { data: event } = await supabase.from("events").select("*").eq("id", parseInt(id)).single();
   if (!event) notFound();
 
-  const guests = db.prepare("SELECT * FROM guests WHERE event_id = ? ORDER BY responded_at DESC").all(event.id) as Guest[];
-  const questions = db.prepare(`SELECT * FROM questions WHERE event_id = ? ORDER BY "order"`).all(event.id) as Question[];
-  const itinerary = db.prepare(`SELECT * FROM itinerary_items WHERE event_id = ? ORDER BY "order"`).all(event.id) as ItineraryItem[];
-  const photos = db.prepare(`SELECT * FROM photos WHERE event_id = ? ORDER BY "order"`).all(event.id) as Photo[];
-  const infoBlocks = db.prepare(`SELECT * FROM info_blocks WHERE event_id = ? ORDER BY "order"`).all(event.id) as InfoBlock[];
-  const responses = db.prepare("SELECT r.* FROM responses r JOIN guests g ON r.guest_id = g.id WHERE g.event_id = ?").all(event.id) as Response[];
+  const [{ data: guestsData }, { data: questionsData }, { data: itineraryData }, { data: photosData }, { data: infoBlocksData }] = await Promise.all([
+    supabase.from("guests").select("*").eq("event_id", event.id).order("responded_at", { ascending: false }),
+    supabase.from("questions").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("itinerary_items").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("photos").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("info_blocks").select("*").eq("event_id", event.id).order("order"),
+  ]);
+
+  const guests = (guestsData ?? []) as Guest[];
+  const questions = (questionsData ?? []) as Question[];
+  const itinerary = (itineraryData ?? []) as ItineraryItem[];
+  const photos = (photosData ?? []) as Photo[];
+  const infoBlocks = (infoBlocksData ?? []) as InfoBlock[];
+
+  const guestIds = guests.map((g) => g.id);
+  const { data: responsesData } = guestIds.length
+    ? await supabase.from("responses").select("*").in("guest_id", guestIds)
+    : { data: [] };
+  const responses = (responsesData ?? []) as Response[];
 
   return (
     <AdminDashboardClient

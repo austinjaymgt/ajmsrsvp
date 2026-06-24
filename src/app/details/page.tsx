@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getDb } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +26,21 @@ function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export default function DetailsPage() {
-  const db = getDb();
-  const event = db.prepare("SELECT * FROM events WHERE status = 'active' LIMIT 1").get() as Event | undefined;
+export default async function DetailsPage() {
+  const { data: eventData } = await supabase.from("events").select("*").eq("status", "active").limit(1).single();
+  const event = eventData as Event | null;
   if (!event) return <div style={{ padding: 40 }}>No event found.</div>;
 
-  const itinerary = db.prepare(`SELECT * FROM itinerary_items WHERE event_id = ? ORDER BY "order"`).all(event.id) as ItineraryItem[];
-  const photos = db.prepare(`SELECT * FROM photos WHERE event_id = ? ORDER BY "order"`).all(event.id) as Photo[];
-  const infoBlocks = db.prepare(`SELECT * FROM info_blocks WHERE event_id = ? ORDER BY "order"`).all(event.id) as InfoBlock[];
-  const guests = db.prepare("SELECT status FROM guests WHERE event_id = ?").all(event.id) as Guest[];
+  const [{ data: itineraryData }, { data: photosData }, { data: infoBlocksData }, { data: guestsData }] = await Promise.all([
+    supabase.from("itinerary_items").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("photos").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("info_blocks").select("*").eq("event_id", event.id).order("order"),
+    supabase.from("guests").select("status").eq("event_id", event.id),
+  ]);
+  const itinerary = (itineraryData ?? []) as ItineraryItem[];
+  const photos = (photosData ?? []) as Photo[];
+  const infoBlocks = (infoBlocksData ?? []) as InfoBlock[];
+  const guests = (guestsData ?? []) as Guest[];
 
   const totalInvited = 8;
   const confirmed = guests.filter((g) => g.status === "confirmed").length;

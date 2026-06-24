@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isAuthenticated } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { supabase } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +16,10 @@ export default async function AdminDashboardPage() {
   const authed = await isAuthenticated();
   if (!authed) redirect("/admin");
 
-  const db = getDb();
-  const events = db.prepare("SELECT * FROM events ORDER BY start_date DESC").all() as Event[];
-  const allGuests = db.prepare("SELECT event_id, status FROM guests").all() as Guest[];
+  const { data: eventsData } = await supabase.from("events").select("*").order("start_date", { ascending: false });
+  const events = (eventsData ?? []) as Event[];
+  const { data: guestsData } = await supabase.from("guests").select("event_id, status");
+  const allGuests = (guestsData ?? []) as Guest[];
 
   function guestCount(eventId: number, status?: string) {
     return allGuests.filter((g) => g.event_id === eventId && (status ? g.status === status : true)).length;
