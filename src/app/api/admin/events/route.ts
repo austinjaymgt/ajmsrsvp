@@ -11,11 +11,13 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase.from("events").select("id").eq("slug", slug).maybeSingle();
   if (existing) return NextResponse.json({ error: `Slug "${slug}" is already taken.` }, { status: 409 });
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("events")
     .insert({ name, slug, start_date: start_date || null, end_date: end_date || null, location: location || null, description: description || null, hero_image_url: hero_image_url || null, status: "active" })
     .select("id")
     .single();
 
-  return NextResponse.json({ success: true, id: data?.id });
+  if (error || !data?.id) return NextResponse.json({ error: error?.message ?? "Failed to create event." }, { status: 500 });
+
+  return NextResponse.json({ success: true, id: data.id });
 }
