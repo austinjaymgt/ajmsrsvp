@@ -17,12 +17,9 @@ export default async function RSVPDonePage({ params, searchParams }: { params: P
         <p style={{ color: C.textSecondary, lineHeight: 1.7, fontFamily: "var(--font-inter), system-ui, sans-serif", fontSize: "0.9375rem", marginBottom: "48px" }}>
           Your RSVP is locked in. We&apos;ll be in touch closer to the date with all the details.
         </p>
-        <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <Link href={`/events/${slug}/details`} style={{ display: "inline-block", padding: "16px 36px", fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", textDecoration: "none", background: C.dark, color: C.bg, fontFamily: "var(--font-inter), system-ui, sans-serif", fontWeight: 700 }}>
             See the weekend
-          </Link>
-          <Link href="/" style={{ display: "inline-block", padding: "16px 36px", fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", textDecoration: "none", background: "transparent", border: `1px solid ${C.border}`, color: C.textSecondary, fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-            All events
           </Link>
         </div>
       </div>
