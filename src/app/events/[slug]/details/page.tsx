@@ -18,6 +18,16 @@ function formatDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function linkifyText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part)
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: C.navy, textDecoration: "underline", wordBreak: "break-all" }}>{part}</a>
+      : part
+  );
+}
+
 export default async function DetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).single();
@@ -122,20 +132,12 @@ export default async function DetailsPage({ params }: { params: Promise<{ slug: 
               <div key={block.id} style={{ background: C.blueLight, border: `1px solid ${C.border}`, padding: "28px", borderRadius: "2px" }}>
                 {block.icon && <div style={{ fontSize: "22px", marginBottom: "12px" }}>{block.icon}</div>}
                 <h4 style={{ fontWeight: 700, color: C.dark, marginBottom: "10px", fontSize: "0.9375rem", ...ss }}>{block.title}</h4>
-                <p style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss, margin: 0, whiteSpace: "pre-line" }}>{block.body}</p>
+                <p style={{ color: C.textSecondary, fontSize: "0.875rem", lineHeight: 1.65, ...ss, margin: 0, whiteSpace: "pre-line", wordBreak: "break-word" }}>{linkifyText(block.body)}</p>
               </div>
             ))}
           </div>
         </section>
       )}
-
-      {/* Headcount */}
-      <section style={{ padding: "72px 24px 0", textAlign: "center" }}>
-        <div style={{ display: "inline-block", background: C.dark, padding: "40px 64px", borderRadius: "2px" }}>
-          <p style={{ fontSize: "3rem", fontWeight: 700, color: C.blue, ...sf, margin: 0, letterSpacing: "-0.02em" }}>{confirmed} of {totalInvited}</p>
-          <p style={{ color: "rgba(254,255,255,0.6)", fontSize: "0.875rem", ...ss, marginTop: "8px", marginBottom: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>confirmed for the weekend</p>
-        </div>
-      </section>
 
       {/* RSVP CTA */}
       <section style={{ padding: "80px 24px 100px", textAlign: "center" }}>
