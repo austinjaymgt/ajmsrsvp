@@ -392,6 +392,7 @@ function ItineraryEditor({ eventId, items, onRefresh }: { eventId: number; items
 
 function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: Photo[]; onRefresh: () => void }) {
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ url: "", caption: "", category: "accommodation" });
 
   async function addPhoto() {
@@ -400,6 +401,20 @@ function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: 
       body: JSON.stringify({ ...form, eventId, order: photos.length }),
     });
     setAdding(false); setForm({ url: "", caption: "", category: "accommodation" }); onRefresh();
+  }
+
+  function startEdit(p: Photo) {
+    setEditingId(p.id);
+    setForm({ url: p.url, caption: p.caption ?? "", category: p.category ?? "accommodation" });
+    setAdding(false);
+  }
+
+  async function saveEdit() {
+    await fetch("/api/admin/photos", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingId, caption: form.caption, category: form.category }),
+    });
+    setEditingId(null); setForm({ url: "", caption: "", category: "accommodation" }); onRefresh();
   }
 
   async function deletePhoto(id: number) {
@@ -411,7 +426,7 @@ function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h2 style={{ ...sf, fontSize: "1.375rem", fontWeight: 700, margin: 0 }}>Photos</h2>
-        <ActionBtn label="+ Add Photo" onClick={() => setAdding(true)} />
+        <ActionBtn label="+ Add Photo" onClick={() => { setAdding(true); setEditingId(null); setForm({ url: "", caption: "", category: "accommodation" }); }} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "24px" }}>
         {photos.map((p) => (
@@ -421,16 +436,19 @@ function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: 
             <div style={{ padding: "10px 12px" }}>
               <div style={{ fontSize: "12px", color: C.textSecondary, marginBottom: "4px" }}>{p.caption || <em>No caption</em>}</div>
               <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: C.navy, fontWeight: 600 }}>{p.category}</div>
-              <button onClick={() => deletePhoto(p.id)} style={{ marginTop: "8px", background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Delete</button>
+              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+                <button onClick={() => startEdit(p)} style={{ background: "none", border: "none", color: C.navy, cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Edit</button>
+                <button onClick={() => deletePhoto(p.id)} style={{ background: "none", border: "none", color: "#b91c1c", cursor: "pointer", fontSize: "11px", padding: 0, fontWeight: 600 }}>Delete</button>
+              </div>
             </div>
           </div>
         ))}
         {photos.length === 0 && <p style={{ color: C.textSecondary, fontSize: "14px" }}>No photos yet.</p>}
       </div>
-      {adding && (
+      {(adding || editingId !== null) && (
         <div style={{ background: C.blueLight, border: `1px solid ${C.border}`, padding: "24px" }}>
-          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>Add Photo</h3>
-          <InputField label="Image URL" value={form.url} onChange={(v) => setForm({ ...form, url: v })} />
+          <h3 style={{ ...sf, fontSize: "1.125rem", fontWeight: 700, marginBottom: "20px" }}>{editingId !== null ? "Edit Photo" : "Add Photo"}</h3>
+          {editingId === null && <InputField label="Image URL" value={form.url} onChange={(v) => setForm({ ...form, url: v })} />}
           <InputField label="Caption (optional)" value={form.caption} onChange={(v) => setForm({ ...form, caption: v })} />
           <label style={{ display: "block", marginBottom: "20px" }}>
             <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", color: C.textSecondary, display: "block", marginBottom: "6px", fontWeight: 600, ...ss }}>Category</span>
@@ -441,8 +459,8 @@ function PhotoEditor({ eventId, photos, onRefresh }: { eventId: number; photos: 
             </select>
           </label>
           <div style={{ display: "flex", gap: "12px" }}>
-            <ActionBtn label="Save" onClick={addPhoto} disabled={!form.url} />
-            <button onClick={() => setAdding(false)} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
+            <ActionBtn label="Save" onClick={editingId !== null ? saveEdit : addPhoto} disabled={!form.url && editingId === null} />
+            <button onClick={() => { setAdding(false); setEditingId(null); setForm({ url: "", caption: "", category: "accommodation" }); }} style={{ background: "none", border: `1px solid ${C.border}`, padding: "10px 24px", cursor: "pointer", fontSize: "11px", color: C.textSecondary, ...ss }}>Cancel</button>
           </div>
         </div>
       )}
